@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Text Extractor</title>
+<style>
+  :root{
+    --bg:#f6f5fb; --card:#ffffff; --line:#ecebf3; --ink:#16151d; --muted:#6b6a78;
+    --accent:#6d4ef5; --accent-soft:#efeafe; --accent-ink:#4b2fd6;
+    --ok:#1f9d55; --warn:#b26b00; --warn-soft:#fff6e6; --err:#c62828; --err-soft:#fdecec;
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+       background:radial-gradient(1200px 600px at 70% -10%,#ece7ff 0,transparent 60%),var(--bg);
+       color:var(--ink);min-height:100vh}
+  header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px}
+  header h1{font-size:22px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;
+        border-radius:999px;padding:6px 12px;font-size:13px;color:var(--muted)}
+  .dot{width:8px;height:8px;border-radius:50%;background:#bbb}
+  .dot.ai{background:var(--accent)} .dot.ocr{background:var(--ok)}
+  main{max-width:980px;margin:0 auto;padding:8px 24px 48px}
+  .hero{text-align:center;margin:28px 0 22px}
+  .hero .logo{width:44px;height:44px;margin:0 auto 10px;display:block}
+  .hero h2{font-size:30px;margin:0 0 6px;letter-spacing:-.02em}
+  .hero p{margin:0;color:var(--muted)}
+  .steps{display:flex;gap:10px;justify-content:center;margin:18px 0 22px;flex-wrap:wrap}
+  .step{display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;background:#f0eff5;color:var(--muted);font-size:14px}
+  .step b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#fff;font-size:12px;font-weight:600}
+  .step.on{background:var(--accent-soft);color:var(--accent-ink);border:1px solid #d9cffd}
+  .step.done{color:var(--ok)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 1px 2px rgba(20,10,60,.03)}
+  .drop{display:block;margin:10px;padding:40px 24px;text-align:center;border:1.5px dashed #d8d4ea;border-radius:var(--radius);cursor:pointer;transition:.15s}
+  .drop:hover,.drop.over{border-color:var(--accent);background:#faf8ff}
+  .drop .ic{width:52px;height:52px;border-radius:14px;background:var(--accent-soft);display:grid;place-items:center;margin:0 auto 12px}
+  .drop h3{margin:0 0 4px;font-size:17px}
+  .drop p{margin:0;color:var(--muted);font-size:14px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;flex-wrap:wrap}
+  .file{display:flex;align-items:center;gap:12px;min-width:0}
+  .file .ic{width:38px;height:38px;border-radius:10px;background:var(--accent-soft);display:grid;place-items:center;flex:none}
+  .file .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px}
+  .file .meta{font-size:13px;color:var(--muted)}
+  select,button{font:inherit}
+  select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;color:var(--ink)}
+  .btn{border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.primary:disabled{background:#c9bdfb;cursor:not-allowed}
+  .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  .btn.ghost:hover{background:#f7f6fb}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .hidden{display:none!important}
+  .result{margin-top:18px}
+  .result .head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .result .head h3{margin:0;font-size:16px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-size:12px;padding:3px 9px;border-radius:999px;background:#f0eff5;color:var(--muted)}
+  .chip.ai{background:var(--accent-soft);color:var(--accent-ink)}
+  .chip.tl{background:#e8f6ee;color:var(--ok)}
+  textarea{width:100%;min-height:380px;border:0;resize:vertical;padding:18px;font:13.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink);background:#fcfcfe;border-radius:0 0 var(--radius) var(--radius);outline:none}
+  .notice{margin-top:14px;padding:12px 14px;border-radius:12px;font-size:14px}
+  .notice.warn{background:var(--warn-soft);color:var(--warn)}
+  .notice.err{background:var(--err-soft);color:var(--err)}
+  .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:s .8s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .foot{margin-top:14px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Text Extractor</h1>
+  <span class="pill" id="engineStatus"><span class="dot"></span>Checking engine…</span>
+</header>
+
+<main>
+  <section class="hero">
+    <svg class="logo" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+      <circle cx="10" cy="12" r="3" fill="#6d4ef5"/><circle cx="22" cy="12" r="3" fill="#8f76f8"/><circle cx="34" cy="12" r="3" fill="#6d4ef5"/>
+      <rect x="7" y="20" width="30" height="3" rx="1.5" fill="#6d4ef5"/>
+      <rect x="7" y="27" width="22" height="3" rx="1.5" fill="#b3a3fb"/>
+      <rect x="7" y="34" width="26" height="3" rx="1.5" fill="#d3c9fd"/>
+    </svg>
+    <h2>Extract text from any document</h2>
+    <p>Upload a PDF or an image. AI reads it and gives you a .txt file.</p>
+  </section>
+
+  <div class="steps">
+    <span class="step on" id="s1"><b>1</b>Upload</span>
+    <span class="step" id="s2"><b>2</b>Extract</span>
+    <span class="step" id="s3"><b>3</b>Download</span>
+  </div>
+
+  <section class="card">
+    <label class="drop" id="drop">
+      <input type="file" id="fileInput" accept=".pdf,image/*" hidden />
+      <div class="ic">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6d4ef5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M20 16v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3"/></svg>
+      </div>
+      <h3>Drop a PDF or image here, or click to browse</h3>
+      <p>PDF, PNG, JPG, WEBP, TIFF · up to <span id="maxMb">25</span> MB</p>
+    </label>
+
+    <div class="row hidden" id="fileRow">
+      <div class="file">
+        <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6d4ef5" stroke-width="2"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/></svg></div>
+        <div style="min-width:0"><div class="name" id="fileName"></div><div class="meta" id="fileMeta"></div></div>
+      </div>
+      <div class="controls">
+        <select id="engine" title="Reading engine">
+          <option value="auto">Engine: Auto</option>
+          <option value="ai">Engine: AI vision</option>
+          <option value="tesseract">Engine: Offline OCR</option>
+        </select>
+        <button class="btn ghost" id="changeBtn" type="button">Change</button>
+        <button class="btn primary" id="goBtn" type="button">Extract text</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="notices"></div>
+
+  <section class="card result hidden" id="result">
+    <div class="head">
+      <div>
+        <h3 id="resTitle">Extracted text</h3>
+        <div class="chips" id="chips" style="margin-top:6px"></div>
+      </div>
+      <div class="controls">
+        <button class="btn ghost" id="copyBtn" type="button">Copy</button>
+        <button class="btn primary" id="dlBtn" type="button">Download .txt</button>
+      </div>
+    </div>
+    <textarea id="output" spellcheck="false"></textarea>
+  </section>
+
+  <p class="foot">AI can misread text. Check important details against the original.</p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let file = null, downloadName = "extracted.txt", maxMb = 25;
+
+fetch("/api/health").then(r => r.json()).then(h => {
+  maxMb = h.max_upload_mb; $("maxMb").textContent = maxMb;
+  const ai = h.engine === "ai";
+  $("engineStatus").innerHTML = `<span class="dot ${ai ? "ai" : "ocr"}"></span>` +
+    (ai ? `AI: ${h.ai_model}` : "Offline OCR (no AI key set)");
+  if (!h.ai_configured) $("engine").querySelector('[value="ai"]').disabled = true;
+}).catch(() => { $("engineStatus").textContent = "API not reachable"; });
+
+const drop = $("drop");
+["dragenter","dragover"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", ev => { if (ev.dataTransfer.files[0]) pick(ev.dataTransfer.files[0]); });
+$("fileInput").addEventListener("change", ev => { if (ev.target.files[0]) pick(ev.target.files[0]); });
+$("changeBtn").onclick = () => $("fileInput").click();
+
+function pick(f){
+  clearNotices();
+  if (f.size > maxMb * 1024 * 1024) return notice(`That file is ${(f.size/1048576).toFixed(1)} MB. The limit is ${maxMb} MB.`, "err");
+  const ok = f.type === "application/pdf" || f.type.startsWith("image/") || /\.(pdf|png|jpe?g|webp|tiff?|bmp|gif)$/i.test(f.name);
+  if (!ok) return notice("Please upload a PDF or an image file.", "err");
+  file = f;
+  $("fileName").textContent = f.name;
+  $("fileMeta").textContent = `${(f.size/1024).toFixed(0)} KB · ${f.type || "file"}`;
+  drop.classList.add("hidden"); $("fileRow").classList.remove("hidden");
+  $("result").classList.add("hidden");
+  setStep(2);
+}
+
+$("goBtn").onclick = async () => {
+  if (!file) return;
+  clearNotices();
+  const btn = $("goBtn");
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Reading…';
+  const fd = new FormData(); fd.append("file", file); fd.append("engine", $("engine").value);
+  try {
+    const r = await fetch("/api/extract", { method: "POST", body: fd });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body.detail || `Request failed (${r.status})`);
+    show(body);
+  } catch (e) {
+    notice(e.message, "err");
+  } finally {
+    btn.disabled = false; btn.textContent = "Extract text";
+  }
+};
+
+function show(d){
+  downloadName = d.download_name;
+  $("output").value = d.text.trim() ? d.text : "";
+  $("output").placeholder = "No text was found in this file.";
+  const n = d.pages.length;
+  $("resTitle").textContent = d.kind === "pdf" || n > 1 ? `Extracted text · ${n} page${n>1?"s":""}` : "Extracted text";
+  const label = { "text-layer": ["Text layer","tl"], "ai": ["AI vision","ai"], "tesseract": ["Offline OCR",""] };
+  $("chips").innerHTML = Object.entries(d.methods).map(([m,c]) =>
+    `<span class="chip ${label[m]?.[1]||""}">${label[m]?.[0]||m}${n>1?` · ${c}`:""}</span>`).join("") +
+    `<span class="chip">${d.text.length.toLocaleString()} characters</span>`;
+  d.warnings.forEach(w => notice(w, "warn"));
+  $("result").classList.remove("hidden");
+  setStep(3);
+}
+
+$("dlBtn").onclick = () => {
+  const blob = new Blob([$("output").value], { type: "text/plain;charset=utf-8" });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: downloadName });
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+};
+$("copyBtn").onclick = async () => {
+  try { await navigator.clipboard.writeText($("output").value); $("copyBtn").textContent = "Copied"; }
+  catch { $("output").select(); document.execCommand("copy"); $("copyBtn").textContent = "Copied"; }
+  setTimeout(() => $("copyBtn").textContent = "Copy", 1500);
+};
+
+function setStep(n){
+  [1,2,3].forEach(i => { const s = $("s"+i); s.classList.toggle("on", i === n); s.classList.toggle("done", i < n); });
+}
+function notice(msg, kind){
+  const d = document.createElement("div"); d.className = `notice ${kind}`; d.textContent = msg; $("notices").appendChild(d);
+}
+function clearNotices(){ $("notices").innerHTML = ""; }
+</script>
+</body>
+</html>
